@@ -1,0 +1,36 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.provision "fix-no-tty", type: "shell" do |s|
+   s.privileged = false
+   s.inline = "sudo sed -i '/tty/!s/mesg n/tty -s \\&\\& mesg n/' /root/.profile"
+  end
+
+  config.vm.define "cib-quesc" do |app|
+    app.vm.box = "ubuntu/trusty32"
+    app.vm.hostname = "cib-quesc"
+
+    app.vm.provision :shell, path: "bootstrap.sh"
+    app.vm.provision :shell, path: "init.sh", run: "always"
+
+    app.vm.network :private_network, ip: "10.11.12.13"
+    app.vm.network "forwarded_port", guest: 8100, host: 8100
+    app.vm.network "forwarded_port", guest: 35729, host: 35729
+
+    app.vm.synced_folder "../", "/project", create: true, :nfs => true, :mount_options => ['actimeo=2']
+
+    config.vm.provider "virtualbox" do |vb|
+     vb.name = "cib-quesc"
+     vb.memory = 1536
+     vb.customize ["modifyvm", :id, "--usb", "on"]
+     vb.customize ["usbfilter", "add", "0", "--target", :id, "--name", "android", "--vendorid", "0x18d1"]
+     vb.customize ["usbfilter", "add", "0", "--target", :id, "--name", "motorola", "--vendorid", "0x22b8"]
+     vb.customize ["usbfilter", "add", "0", "--target", :id, "--name", "motorolaD3", "--vendorid", "0x0bb4"]
+     vb.customize ["usbfilter", "add", "0", "--target", :id, "--name", "samsunguinho", "--vendorid", "0x04e8"]
+     vb.customize ["usbfilter", "add", "0", "--target", :id, "--name", "xaiomi", "--vendorid", "0x2717"]
+    end
+  end
+end
